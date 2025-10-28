@@ -1,13 +1,12 @@
 import React, { useState } from "react";
-import axios from "axios";
-const token = localStorage.getItem("jwtToken");
-axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+import axios from "./helpers/helper_axios";
 
 function LoginRegister() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,12 +15,12 @@ function LoginRegister() {
       url: `${process.env.REACT_APP_BE_URL}/auth/login`,
       data: {
         user: {
+          email,
           username,
           password,
         },
       },
     });
-    console.log("response login", response.data.access_token);
     localStorage.setItem("jwtToken", response.data.access_token);
     setEmail("");
     setPassword("");
@@ -39,10 +38,10 @@ function LoginRegister() {
           username,
           email,
           password,
+          name,
         },
       },
     });
-    console.log("response register", response.data.access_token);
     localStorage.setItem("jwtToken", response.data.access_token);
     setEmail("");
     setPassword("");
@@ -56,14 +55,16 @@ function LoginRegister() {
     >
       <h2>{isLogin ? "Login" : "Register"}</h2>
       <form onSubmit={isLogin ? handleLogin : handleRegister}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-        />
+        {!isLogin && (
+          <input
+            type="name"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+          />
+        )}
         {!isLogin && (
           <input
             type="email"
@@ -74,6 +75,14 @@ function LoginRegister() {
             style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
           />
         )}
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+        />
         <input
           type="password"
           placeholder="Password"
