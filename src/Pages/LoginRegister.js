@@ -1,7 +1,10 @@
 import React, { useState } from "react";
-import axios from "./helpers/helper_axios";
+import axios from "../helpers/helper_axios";
+import { useNavigate } from "react-router-dom";
 
 function LoginRegister() {
+  const navigate = useNavigate();
+
   const [isLogin, setIsLogin] = useState(true);
   let userData = { email: "", password: "", username: "", name: "" };
   let [userDetails, setUserDetails] = useState(userData);
@@ -27,6 +30,7 @@ function LoginRegister() {
       });
       localStorage.setItem("jwtToken", response.data.access_token);
       setUserDetails(userData);
+      navigate("/dashboard");
     } catch (error) {
       alert("Login failed. Please check your credentials.");
       setUserDetails(userData);
@@ -51,6 +55,7 @@ function LoginRegister() {
       });
       localStorage.setItem("jwtToken", response.data.access_token);
       setUserDetails(userData);
+      setIsLogin(true); // Switch to login after successful registration
     } catch (error) {
       alert("Registration failed. Please check your credentials.");
       setUserDetails(userData);
