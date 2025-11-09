@@ -56,6 +56,38 @@ function Dashboard() {
     });
   };
 
+  const removeBookFromLists = (book) => {
+    setBookLists((prevLists) => {
+      const newLists = { ...prevLists };
+
+      //eslint-disable-next-line array-callback-return
+      Object.keys(newLists).map((listName) => {
+        if (newLists[listName].some((b) => b.id === book.id)) {
+          newLists[listName] = newLists[listName].filter(
+            (b) => b.id !== book.id
+          );
+        }
+      });
+
+      return newLists;
+    });
+  };
+
+  let listName = (book) => {
+    let camelMap = {
+      toRead: "To Read",
+      finished: "Finished",
+      currentlyReading: "Currently Reading",
+    };
+
+    const listName = Object.keys(bookLists).find((list) =>
+      bookLists[list].some((b) => b.id === book.id)
+    );
+    let current_list =
+      listName && camelMap[listName] ? camelMap[listName] : null;
+    return current_list;
+  };
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>My Bookshelf</h1>
@@ -97,7 +129,8 @@ function Dashboard() {
                   onChange={(e) => {
                     const value = e.target.value;
                     if (!value) return;
-                    addBookToList(book, value);
+                    if (value === "remove") removeBookFromLists(book);
+                    else addBookToList(book, value);
                     // reset the select back to placeholder
                     e.target.value = "";
                   }}
@@ -109,11 +142,31 @@ function Dashboard() {
                   }}
                 >
                   <option value="" disabled>
-                    {`Add to...`}
+                    Add to...
                   </option>
-                  <option value="toRead">To Read</option>
-                  <option value="currentlyReading">Currently Reading</option>
-                  <option value="finished">Finished</option>
+                  <option
+                    value="toRead"
+                    disabled={bookLists.toRead.some((b) => b.id === book.id)}
+                  >
+                    To Read
+                  </option>
+                  <option
+                    value="currentlyReading"
+                    disabled={bookLists.currentlyReading.some(
+                      (b) => b.id === book.id
+                    )}
+                  >
+                    Currently Reading
+                  </option>
+                  <option
+                    value="finished"
+                    disabled={bookLists.finished.some((b) => b.id === book.id)}
+                  >
+                    Finished
+                  </option>
+                  {listName(book) && (
+                    <option value="remove">Remove from lists</option>
+                  )}
                 </select>
               </div>
             </div>
