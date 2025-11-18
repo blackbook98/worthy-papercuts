@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "../helpers/helper_axios";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 function LoginRegister() {

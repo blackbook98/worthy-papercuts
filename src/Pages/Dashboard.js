@@ -1,6 +1,9 @@
 import { useState } from "react";
+import axios from "../helpers/helper_axios";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState([]);
   const [bookLists, setBookLists] = useState({
@@ -32,7 +35,7 @@ function Dashboard() {
     setBooks([...books_data_first, ...books_data_second] || []);
   };
 
-  const addBookToList = (book, listName) => {
+  const addBookToList = async (book, listName) => {
     setBookLists((prevLists) => {
       const newLists = { ...prevLists };
 
@@ -54,6 +57,24 @@ function Dashboard() {
 
       return newLists;
     });
+
+    try {
+      await axios({
+        url: `${process.env.REACT_APP_BE_URL}/saveLists`,
+        method: "post",
+        data: {
+          book: book,
+          listName: listName,
+        },
+      });
+    } catch (e) {
+      if (e.response?.data?.message?.indexOf("Unauthorized") !== -1) {
+        alert("Your login has expired");
+        navigate("/login");
+      } else {
+        console.error(e);
+      }
+    }
   };
 
   const removeBookFromLists = (book) => {
