@@ -123,10 +123,10 @@ function Dashboard() {
       // Rearrange the lists according to type: toRead, finished, currentlyReading
       const formatList = (listName) =>
         response.data
-          .filter((book) => book.list === listName)
-          .map((book) => ({
-            id: book.book_id,
-            volumeInfo: book.volume_info,
+          .filter((listInfo) => listInfo.list === listName)
+          .map((listInfo) => ({
+            id: listInfo.book.book_id,
+            volumeInfo: listInfo.book.volume_info,
           }));
 
       const listsData = {
