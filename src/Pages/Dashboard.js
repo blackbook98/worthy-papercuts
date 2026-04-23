@@ -25,18 +25,20 @@ function Dashboard() {
       )}&key=${API_KEY}&maxResults=20&printType=books&orderBy=relevance`
     );
     const data = await response.json();
-    let books_data_first = [];
-    let books_data_second = [];
-
-    //eslint-disable-next-line array-callback-return
-    data?.items?.map((book) => {
-      if (book.volumeInfo.imageLinks?.thumbnail) {
-        books_data_first.push(book);
-      } else {
-        books_data_second.push(book);
-      }
+    const seen = new Set();
+    const uniqueBooks = (data?.items || []).filter((book) => {
+      const key = book.volumeInfo.title?.toLowerCase().trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
-    setBooks([...books_data_first, ...books_data_second] || []);
+    const withThumbnail = uniqueBooks.filter(
+      (b) => b.volumeInfo.imageLinks?.thumbnail
+    );
+    const withoutThumbnail = uniqueBooks.filter(
+      (b) => !b.volumeInfo.imageLinks?.thumbnail
+    );
+    setBooks([...withThumbnail, ...withoutThumbnail]);
   };
 
   const addBookToList = async (book, listName) => {
