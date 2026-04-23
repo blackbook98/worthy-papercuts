@@ -9,6 +9,12 @@ const LIST_LABELS = {
   finished: "Finished",
 };
 
+const LIST_ACCENTS = {
+  toRead: "#e8a235",
+  currentlyReading: "#22d3ee",
+  finished: "#4ade80",
+};
+
 function Dashboard() {
   const navigate = useNavigate();
 
@@ -19,9 +25,26 @@ function Dashboard() {
     finished: [],
     currentlyReading: [],
   });
-  const [openMenu, setOpenMenu] = useState(null); // { bookId, listName }
-  const [reviewTarget, setReviewTarget] = useState(null); // book
+  const [openMenu, setOpenMenu] = useState(null);
+  const [reviewTarget, setReviewTarget] = useState(null);
+  const [shelfSearch, setShelfSearch] = useState({
+    toRead: { open: false, query: "" },
+    currentlyReading: { open: false, query: "" },
+    finished: { open: false, query: "" },
+  });
   const menuRef = useRef(null);
+
+  const toggleShelfSearch = (list) =>
+    setShelfSearch((prev) => ({
+      ...prev,
+      [list]: { open: !prev[list].open, query: "" },
+    }));
+
+  const setShelfQuery = (list, value) =>
+    setShelfSearch((prev) => ({
+      ...prev,
+      [list]: { ...prev[list], query: value },
+    }));
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -62,7 +85,6 @@ function Dashboard() {
     setOpenMenu(null);
     setBookLists((prevLists) => {
       const newLists = { ...prevLists };
-
       //eslint-disable-next-line array-callback-return
       Object.keys(newLists).map((previousListName) => {
         if (
@@ -73,12 +95,10 @@ function Dashboard() {
             (b) => b.id !== book.id
           );
         }
-
         if (!newLists[listName].some((b) => b.id === book.id)) {
           newLists[listName] = [...newLists[listName], book];
         }
       });
-
       return newLists;
     });
 
@@ -121,8 +141,10 @@ function Dashboard() {
     });
     setOpenMenu(null);
     try {
+      console.log("Removing book from lists:", book.id);
+      console.log("User ID:", localStorage.getItem("userId"));
       await axios({
-        url: `${process.env.REACT_APP_BE_URL}/saveLists`,
+        url: `${process.env.REACT_APP_BE_URL}/lists`,
         method: "delete",
         data: { book_id: book.id, user_id: localStorage.getItem("userId") },
       });
@@ -139,10 +161,11 @@ function Dashboard() {
   const fetchSavedBookLists = async () => {
     try {
       const response = await axios({
-        url: `${process.env.REACT_APP_BE_URL}/lists?userId=${localStorage.getItem("userId")}`,
+        url: `${
+          process.env.REACT_APP_BE_URL
+        }/lists?userId=${localStorage.getItem("userId")}`,
         method: "get",
       });
-      // Rearrange the lists according to type: toRead, finished, currentlyReading
       const formatList = (listName) =>
         response.data
           .filter((listInfo) => listInfo.list === listName)
@@ -151,12 +174,11 @@ function Dashboard() {
             volumeInfo: listInfo.book.volume_info,
           }));
 
-      const listsData = {
+      setBookLists({
         toRead: formatList("toRead"),
         finished: formatList("finished"),
         currentlyReading: formatList("currentlyReading"),
-      };
-      setBookLists(listsData);
+      });
     } catch (e) {
       console.error("Error fetching book lists", e);
     }
@@ -168,169 +190,268 @@ function Dashboard() {
     } else {
       fetchSavedBookLists();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>My Bookshelf</h1>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        {/* Header */}
+        <header style={styles.header}>
+          <div style={styles.headerOrn}>✦</div>
+          <h1 style={styles.title}>My Bookshelf</h1>
+          <div style={styles.headerOrn}>✦</div>
+        </header>
 
-      <div style={styles.searchContainer}>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search books..."
-          style={styles.searchInput}
-          onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
-        />
-        <button onClick={fetchBooks} style={styles.searchButton}>
-          Search
-        </button>
-      </div>
-
-      <section>
-        <h2 style={styles.sectionTitle}>Search Results</h2>
-        <div style={styles.bookGrid}>
-          {books.length === 0 && <p>No books found. Try searching!</p>}
-          {books.map((book) => (
-            <div key={book.id} style={styles.bookCard}>
-              {book.volumeInfo.imageLinks?.thumbnail && (
-                <img
-                  src={book.volumeInfo.imageLinks.thumbnail}
-                  alt={book.volumeInfo.title}
-                  style={styles.bookImage}
-                />
-              )}
-              <h3 style={styles.bookTitle}>{book.volumeInfo.title}</h3>
-              <p style={styles.authors}>
-                {book.volumeInfo.authors?.join(", ") || "Unknown Author"}
-              </p>
-              <div style={styles.buttonGroup}>
-                <select
-                  defaultValue=""
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (!value) return;
-                    if (value === "remove") removeBookFromLists(book);
-                    else addBookToList(book, value);
-                    // reset the select back to placeholder
-                    e.target.value = "";
-                  }}
-                  style={{
-                    ...styles.listButton,
-                    padding: "0.4rem 0.6rem",
-                    textAlign: "left",
-                    backgroundColor: "#34495e",
-                  }}
-                >
-                  <option value="" disabled>
-                    Add to...
-                  </option>
-                  <option
-                    value="toRead"
-                    disabled={bookLists.toRead.some((b) => b.id === book.id)}
-                  >
-                    To Read
-                  </option>
-                  <option
-                    value="currentlyReading"
-                    disabled={bookLists.currentlyReading.some(
-                      (b) => b.id === book.id
-                    )}
-                  >
-                    Reading
-                  </option>
-                  <option
-                    value="finished"
-                    disabled={bookLists.finished.some((b) => b.id === book.id)}
-                  >
-                    Finished
-                  </option>
-                  {Object.keys(LIST_LABELS).some((l) =>
-                    bookLists[l].some((b) => b.id === book.id)
-                  ) && <option value="remove">Remove from lists</option>}
-                </select>
-              </div>
-            </div>
-          ))}
+        {/* Search */}
+        <div style={styles.searchWrapper}>
+          <div style={styles.searchBar}>
+            <span style={styles.searchIcon}>⌕</span>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for a book..."
+              style={styles.searchInput}
+              onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
+            />
+            <button onClick={fetchBooks} style={styles.searchButton}>
+              Search
+            </button>
+          </div>
         </div>
-      </section>
 
-      <section style={styles.listsContainer}>
-        {["toRead", "currentlyReading", "finished"].map((list) => (
-          <div key={list} style={styles.listSection}>
-            <h2>{LIST_LABELS[list].toUpperCase()}</h2>
-            {bookLists[list].length === 0 ? (
-              <p style={{ fontStyle: "italic" }}>No books in this list</p>
-            ) : (
-              <ul style={styles.bookList}>
-                {bookLists[list].map((book) => {
-                  const isOpen =
-                    openMenu?.bookId === book.id && openMenu?.listName === list;
-                  const otherLists = Object.keys(LIST_LABELS).filter(
-                    (l) => l !== list
-                  );
-                  return (
-                    <li key={book.id} style={styles.bookListItem}>
-                      <div style={styles.bookListRow}>
-                        <div style={styles.bookListText}>
-                          {book.volumeInfo.title}
-                          <span style={styles.authorsSmall}>
-                            {" "}
-                            by{" "}
-                            {book.volumeInfo.authors?.join(", ") ||
-                              "Unknown Author"}
-                          </span>
-                        </div>
-                        <div
-                          style={{ position: "relative" }}
-                          ref={isOpen ? menuRef : null}
-                        >
-                          <button
-                            style={styles.dotsButton}
-                            onClick={() =>
-                              setOpenMenu(
-                                isOpen
-                                  ? null
-                                  : { bookId: book.id, listName: list }
-                              )
-                            }
-                          >
-                            ⋮
-                          </button>
-                          {isOpen && (
-                            <div style={styles.dropdown}>
-                              {otherLists.map((target) => (
-                                <div
-                                  key={target}
-                                  style={styles.dropdownItem}
-                                  onClick={() => addBookToList(book, target)}
-                                >
-                                  {LIST_LABELS[target]}
-                                </div>
-                              ))}
-                              <div
-                                style={{
-                                  ...styles.dropdownItem,
-                                  color: "#e74c3c",
-                                }}
-                                onClick={() => removeBookFromLists(book)}
-                              >
-                                Remove from list
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+        {/* Search Results */}
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Search Results</h2>
+            {books.length > 0 && (
+              <span style={styles.badge}>{books.length}</span>
             )}
           </div>
-        ))}
-      </section>
+
+          {books.length === 0 ? (
+            <p style={styles.emptyState}>
+              Search for a book above to discover your next read.
+            </p>
+          ) : (
+            <div style={styles.bookGrid}>
+              {books.map((book) => (
+                <div key={book.id} style={styles.bookCard}>
+                  <div style={styles.bookCoverWrap}>
+                    {book.volumeInfo.imageLinks?.thumbnail ? (
+                      <img
+                        src={book.volumeInfo.imageLinks.thumbnail}
+                        alt={book.volumeInfo.title}
+                        style={styles.bookCover}
+                      />
+                    ) : (
+                      <div style={styles.noCover}>
+                        <span style={styles.noCoverIcon}>📖</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={styles.bookInfo}>
+                    <h3 style={styles.bookTitle}>{book.volumeInfo.title}</h3>
+                    <p style={styles.bookAuthors}>
+                      {book.volumeInfo.authors?.join(", ") || "Unknown Author"}
+                    </p>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (!value) return;
+                        if (value === "remove") removeBookFromLists(book);
+                        else addBookToList(book, value);
+                        e.target.value = "";
+                      }}
+                      style={styles.addSelect}
+                    >
+                      <option value="" disabled>
+                        + Add to list
+                      </option>
+                      <option
+                        value="toRead"
+                        disabled={bookLists.toRead.some(
+                          (b) => b.id === book.id
+                        )}
+                      >
+                        To Read
+                      </option>
+                      <option
+                        value="currentlyReading"
+                        disabled={bookLists.currentlyReading.some(
+                          (b) => b.id === book.id
+                        )}
+                      >
+                        Reading
+                      </option>
+                      <option
+                        value="finished"
+                        disabled={bookLists.finished.some(
+                          (b) => b.id === book.id
+                        )}
+                      >
+                        Finished
+                      </option>
+                      {Object.keys(LIST_LABELS).some((l) =>
+                        bookLists[l].some((b) => b.id === book.id)
+                      ) && <option value="remove">Remove from lists</option>}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Shelves */}
+        <section style={styles.shelvesSection}>
+          <h2 style={styles.shelvesSectionTitle}>Your Shelves</h2>
+          <div style={styles.shelvesGrid}>
+            {["toRead", "currentlyReading", "finished"].map((list) => (
+              <div key={list} style={styles.shelf}>
+                <div
+                  style={{
+                    ...styles.shelfAccentBar,
+                    backgroundColor: LIST_ACCENTS[list],
+                  }}
+                />
+                <div style={styles.shelfHeader}>
+                  <h3
+                    style={{ ...styles.shelfTitle, color: LIST_ACCENTS[list] }}
+                  >
+                    {LIST_LABELS[list].toUpperCase()}
+                  </h3>
+                  <div style={styles.shelfHeaderRight}>
+                    <span
+                      style={{
+                        ...styles.shelfCount,
+                        backgroundColor: LIST_ACCENTS[list] + "22",
+                        color: LIST_ACCENTS[list],
+                      }}
+                    >
+                      {bookLists[list].length}
+                    </span>
+                    {bookLists[list].length > 0 && (
+                      <button
+                        style={{
+                          ...styles.shelfSearchToggle,
+                          color: shelfSearch[list].open
+                            ? LIST_ACCENTS[list]
+                            : "#444",
+                        }}
+                        onClick={() => toggleShelfSearch(list)}
+                        title="Search in list"
+                      >
+                        🔍
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {shelfSearch[list].open && (
+                  <div style={styles.shelfSearchBar}>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={shelfSearch[list].query}
+                      onChange={(e) => setShelfQuery(list, e.target.value)}
+                      placeholder="Filter by title or author..."
+                      style={styles.shelfSearchInput}
+                    />
+                  </div>
+                )}
+
+                {bookLists[list].length === 0 ? (
+                  <p style={styles.shelfEmpty}>Nothing here yet.</p>
+                ) : (
+                  <ul style={styles.shelfList}>
+                    {bookLists[list]
+                      .filter((book) => {
+                        const q = shelfSearch[list].query.toLowerCase().trim();
+                        if (!q) return true;
+                        return (
+                          book.volumeInfo.title?.toLowerCase().includes(q) ||
+                          book.volumeInfo.authors
+                            ?.join(", ")
+                            .toLowerCase()
+                            .includes(q)
+                        );
+                      })
+                      .map((book) => {
+                        const isOpen =
+                          openMenu?.bookId === book.id &&
+                          openMenu?.listName === list;
+                        const otherLists = Object.keys(LIST_LABELS).filter(
+                          (l) => l !== list
+                        );
+                        return (
+                          <li key={book.id} style={styles.shelfItem}>
+                            <div style={styles.shelfItemRow}>
+                              <div style={styles.shelfItemText}>
+                                <span style={styles.shelfBookTitle}>
+                                  {book.volumeInfo.title}
+                                </span>
+                                <span style={styles.shelfBookAuthor}>
+                                  {" "}
+                                  by{" "}
+                                  {book.volumeInfo.authors?.join(", ") ||
+                                    "Unknown"}
+                                </span>
+                              </div>
+                              <div
+                                style={{ position: "relative" }}
+                                ref={isOpen ? menuRef : null}
+                              >
+                                <button
+                                  style={styles.dotsBtn}
+                                  onClick={() =>
+                                    setOpenMenu(
+                                      isOpen
+                                        ? null
+                                        : { bookId: book.id, listName: list }
+                                    )
+                                  }
+                                >
+                                  ⋮
+                                </button>
+                                {isOpen && (
+                                  <div style={styles.dropdown}>
+                                    {otherLists.map((target) => (
+                                      <div
+                                        key={target}
+                                        style={styles.dropdownItem}
+                                        onClick={() =>
+                                          addBookToList(book, target)
+                                        }
+                                      >
+                                        {LIST_LABELS[target]}
+                                      </div>
+                                    ))}
+                                    <div
+                                      style={{
+                                        ...styles.dropdownItem,
+                                        ...styles.dropdownItemDanger,
+                                      }}
+                                      onClick={() => removeBookFromLists(book)}
+                                    >
+                                      Remove from list
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
 
       {reviewTarget && (
         <ReviewModal book={reviewTarget} onClose={closeReview} />
@@ -340,164 +461,361 @@ function Dashboard() {
 }
 
 const styles = {
+  page: {
+    width: "100%",
+    minHeight: "100vh",
+    backgroundColor: "#0d0d0d",
+    backgroundImage:
+      "radial-gradient(ellipse at 20% 20%, rgba(79,142,247,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(232,162,53,0.04) 0%, transparent 60%)",
+  },
   container: {
-    maxWidth: "90%",
-    margin: "1rem auto",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    color: "#333",
+    maxWidth: 1100,
+    margin: "0 auto",
+    padding: "2.5rem 2rem 4rem",
+    fontFamily: "'Segoe UI', system-ui, sans-serif",
+    color: "#e5e5e5",
+  },
+
+  // Header
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "1rem",
+    marginBottom: "2.5rem",
   },
   title: {
-    textAlign: "center",
-    marginBottom: "1.5rem",
-    color: "var(--text)",
+    fontSize: "2.4rem",
+    fontWeight: 700,
+    letterSpacing: "0.03em",
+    color: "#f5f0e8",
+    textShadow: "0 0 40px rgba(232,162,53,0.15)",
+    margin: 0,
   },
-  searchContainer: {
+  headerOrn: {
+    fontSize: "1rem",
+    color: "#e8a235",
+    opacity: 0.6,
+  },
+
+  // Search
+  searchWrapper: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "2",
-    spacing: "1rem",
+    marginBottom: "2.5rem",
+  },
+  searchBar: {
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: "#161616",
+    border: "1px solid #2e2e2e",
+    borderRadius: 50,
+    padding: "0.35rem 0.35rem 0.35rem 1.1rem",
+    width: "100%",
+    maxWidth: 540,
+    gap: 8,
+    boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+  },
+  searchIcon: {
+    fontSize: "1.3rem",
+    color: "#666",
+    userSelect: "none",
+    lineHeight: 1,
   },
   searchInput: {
-    width: 300,
-    padding: "0.5rem 1rem",
+    flex: 1,
+    background: "none",
+    border: "none",
+    outline: "none",
+    color: "#e5e5e5",
     fontSize: "1rem",
-    borderRadius: 4,
-    border: "1px solid #ccc",
-    marginRight: 8,
+    padding: "0.3rem 0",
   },
   searchButton: {
-    padding: "0.5rem 1.5rem",
-    fontSize: "1rem",
-    backgroundColor: "#2980b9",
-    border: "none",
-    borderRadius: 4,
+    backgroundColor: "#4f8ef7",
     color: "white",
+    border: "none",
+    borderRadius: 50,
+    padding: "0.5rem 1.4rem",
+    fontSize: "0.95rem",
+    fontWeight: 600,
     cursor: "pointer",
+    letterSpacing: "0.02em",
+  },
+
+  // Section
+  section: {
+    marginBottom: "3rem",
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.6rem",
+    marginBottom: "1.2rem",
+    borderBottom: "1px solid #1f1f1f",
+    paddingBottom: "0.6rem",
   },
   sectionTitle: {
-    borderBottom: "2px solid #34495e",
-    paddingBottom: "0.25rem",
-    marginBottom: "1rem",
-    color: "var(--text)",
+    fontSize: "1rem",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "#888",
+    margin: 0,
   },
+  badge: {
+    backgroundColor: "#1e1e1e",
+    color: "#666",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    padding: "0.15rem 0.5rem",
+    borderRadius: 20,
+    border: "1px solid #2a2a2a",
+  },
+  emptyState: {
+    color: "#555",
+    fontStyle: "italic",
+    fontSize: "0.95rem",
+    padding: "1rem 0",
+  },
+
+  // Book grid
   bookGrid: {
     display: "flex",
-    gap: "20px",
+    gap: 16,
     overflowX: "auto",
-    paddingBottom: "0.5rem",
-    WebkitOverflowScrolling: "touch",
+    paddingBottom: "0.75rem",
     scrollbarWidth: "thin",
-    color: "var(--text)",
+    scrollbarColor: "#2a2a2a transparent",
   },
   bookCard: {
-    border: "1px solid #ddd",
-    borderRadius: 6,
-    padding: "1rem",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    flex: "0 0 148px",
+    backgroundColor: "#141414",
+    border: "1px solid #222",
+    borderRadius: 10,
+    overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    flex: "0 0 180px",
-    minWidth: 180,
+    transition: "transform 0.15s, box-shadow 0.15s",
+    cursor: "default",
   },
-  bookImage: {
-    width: 120,
-    height: "auto",
-    marginBottom: "0.8rem",
-    borderRadius: 4,
+  bookCoverWrap: {
+    width: "100%",
+    height: 196,
+    overflow: "hidden",
+    backgroundColor: "#1a1a1a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bookCover: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  noCover: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1c1c1c",
+  },
+  noCoverIcon: {
+    fontSize: "2.5rem",
+    opacity: 0.3,
+  },
+  bookInfo: {
+    padding: "0.7rem 0.7rem 0.6rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
   },
   bookTitle: {
-    fontSize: "1.1rem",
-    marginBottom: "0.4rem",
+    fontSize: "0.82rem",
+    fontWeight: 600,
+    color: "#e0e0e0",
+    lineHeight: 1.3,
+    margin: 0,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
-  authors: {
-    fontSize: "0.9rem",
-    marginBottom: "0.8rem",
-    color: "#555",
+  bookAuthors: {
+    fontSize: "0.75rem",
+    color: "#666",
+    margin: 0,
+    display: "-webkit-box",
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
   },
-  buttonGroup: {
-    display: "flex",
-    justifyContent: "space-between",
+  addSelect: {
+    marginTop: "auto",
     width: "100%",
-    gap: 8,
-  },
-  listButton: {
-    flexGrow: 1,
-    padding: "0.4rem 0",
-    border: "none",
-    borderRadius: 4,
-    color: "white",
+    backgroundColor: "#1e1e1e",
+    color: "#aaa",
+    border: "1px solid #2e2e2e",
+    borderRadius: 6,
+    padding: "0.35rem 0.4rem",
+    fontSize: "0.75rem",
     cursor: "pointer",
-    fontWeight: "bold",
+    outline: "none",
+    marginTop: 8,
   },
-  listsContainer: {
-    marginTop: "3rem",
+
+  // Shelves
+  shelvesSection: {
+    marginTop: "1rem",
+  },
+  shelvesSectionTitle: {
+    fontSize: "1rem",
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    color: "#888",
+    borderBottom: "1px solid #1f1f1f",
+    paddingBottom: "0.6rem",
+    marginBottom: "1.2rem",
+  },
+  shelvesGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 20,
+  },
+  shelf: {
+    backgroundColor: "#111",
+    border: "1px solid #1e1e1e",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  shelfAccentBar: {
+    height: 3,
+    width: "100%",
+  },
+  shelfHeader: {
     display: "flex",
-    justifyContent: "space-around",
-    gap: "20px",
-    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0.9rem 1rem 0.5rem",
   },
-  listSection: {
-    flexBasis: "30%",
-    backgroundColor: "#ecf0f1",
-    padding: "1rem",
-    borderRadius: 8,
-    minWidth: 250,
+  shelfTitle: {
+    fontSize: "0.78rem",
+    fontWeight: 700,
+    letterSpacing: "0.12em",
+    margin: 0,
   },
-  bookList: {
-    listStyleType: "none",
-    paddingLeft: 0,
-    maxHeight: "174px",
+  shelfCount: {
+    fontSize: "0.72rem",
+    fontWeight: 700,
+    padding: "0.15rem 0.55rem",
+    borderRadius: 20,
+  },
+  shelfHeaderRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  shelfSearchToggle: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "0.75rem",
+    padding: 0,
+    lineHeight: 1,
+    transition: "color 0.15s",
+  },
+  shelfSearchBar: {
+    padding: "0 0.75rem 0.6rem",
+  },
+  shelfSearchInput: {
+    width: "100%",
+    background: "#1a1a1a",
+    border: "1px solid #2a2a2a",
+    borderRadius: 6,
+    padding: "0.35rem 0.6rem",
+    fontSize: "0.8rem",
+    color: "#d5d5d5",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  shelfEmpty: {
+    color: "#444",
+    fontStyle: "italic",
+    fontSize: "0.88rem",
+    padding: "0.5rem 1rem 1.2rem",
+  },
+  shelfList: {
+    listStyle: "none",
+    padding: "0 0 0.5rem",
+    margin: 0,
+    maxHeight: 220,
     overflowY: "auto",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#2a2a2a transparent",
   },
-  bookListItem: {
-    padding: "0.5rem 0",
-    borderBottom: "1px solid #bdc3c7",
-    fontWeight: "600",
+  shelfItem: {
+    borderTop: "1px solid #1a1a1a",
+    padding: "0.55rem 1rem",
   },
-  bookListRow: {
+  shelfItemRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 8,
+    gap: 6,
   },
-  bookListText: {
+  shelfItemText: {
     flex: 1,
     minWidth: 0,
+    lineHeight: 1.4,
   },
-  authorsSmall: {
-    fontWeight: "normal",
-    fontSize: "0.85rem",
-    color: "#7f8c8d",
+  shelfBookTitle: {
+    fontSize: "0.88rem",
+    fontWeight: 600,
+    color: "#d5d5d5",
   },
-  dotsButton: {
+  shelfBookAuthor: {
+    fontSize: "0.78rem",
+    color: "#555",
+    fontWeight: 400,
+  },
+  dotsBtn: {
     background: "none",
     border: "none",
     cursor: "pointer",
     fontSize: "1.1rem",
-    padding: "0 4px",
-    color: "#555",
+    color: "#444",
+    padding: "0 2px",
     lineHeight: 1,
     flexShrink: 0,
+    borderRadius: 4,
   },
   dropdown: {
     position: "absolute",
     right: 0,
-    top: "100%",
-    backgroundColor: "#fff",
-    border: "1px solid #ccc",
-    borderRadius: 4,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    top: "110%",
+    backgroundColor: "#1a1a1a",
+    border: "1px solid #2e2e2e",
+    borderRadius: 8,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
     zIndex: 100,
-    minWidth: 160,
+    minWidth: 170,
     overflow: "hidden",
   },
   dropdownItem: {
-    padding: "0.5rem 0.8rem",
+    padding: "0.55rem 0.9rem",
     cursor: "pointer",
-    fontSize: "0.9rem",
+    fontSize: "0.88rem",
+    color: "#ccc",
     whiteSpace: "nowrap",
+    transition: "background 0.1s",
+  },
+  dropdownItemDanger: {
+    color: "#e06060",
+    borderTop: "1px solid #2a2a2a",
   },
 };
 

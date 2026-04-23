@@ -64,59 +64,57 @@ function LoginRegister() {
   };
 
   return (
-    <div className="app">
-      <div className="auth-container">
-        <div className="card">
-          <h2>{isLogin ? "Login" : "Create an Account"}</h2>
+    <div className="auth-container">
+      <div className="card">
+        <h2>{isLogin ? "Login" : "Create an Account"}</h2>
 
-          <form onSubmit={isLogin ? handleLogin : handleRegister}>
-            {!isLogin && (
-              <input
-                type="text"
-                placeholder="Name"
-                value={userDetails.name}
-                onChange={(e) => updateUserDetails("name", e.target.value)}
-                required
-              />
-            )}
-
-            {!isLogin && (
-              <input
-                type="email"
-                placeholder="Email"
-                value={userDetails.email}
-                onChange={(e) => updateUserDetails("email", e.target.value)}
-                required
-              />
-            )}
-
+        <form onSubmit={isLogin ? handleLogin : handleRegister}>
+          {!isLogin && (
             <input
               type="text"
-              placeholder="Username"
-              value={userDetails.username}
-              onChange={(e) => updateUserDetails("username", e.target.value)}
+              placeholder="Name"
+              value={userDetails.name}
+              onChange={(e) => updateUserDetails("name", e.target.value)}
               required
             />
+          )}
 
+          {!isLogin && (
             <input
-              type="password"
-              placeholder="Password"
-              value={userDetails.password}
-              onChange={(e) => updateUserDetails("password", e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={userDetails.email}
+              onChange={(e) => updateUserDetails("email", e.target.value)}
               required
             />
+          )}
 
-            <button type="submit">{isLogin ? "Login" : "Submit"}</button>
-          </form>
+          <input
+            type="text"
+            placeholder="Username"
+            value={userDetails.username}
+            onChange={(e) => updateUserDetails("username", e.target.value)}
+            required
+          />
 
-          <div className="auth-switch">
-            <div className="info-text">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-            </div>
-            <button className="secondary" onClick={() => setIsLogin(!isLogin)}>
-              {isLogin ? "Register" : "Login"}
-            </button>
+          <input
+            type="password"
+            placeholder="Password"
+            value={userDetails.password}
+            onChange={(e) => updateUserDetails("password", e.target.value)}
+            required
+          />
+
+          <button type="submit">{isLogin ? "Login" : "Submit"}</button>
+        </form>
+
+        <div className="auth-switch">
+          <div className="info-text">
+            {isLogin ? "Don't have an account?" : "Already have an account?"}
           </div>
+          <button className="secondary" onClick={() => setIsLogin(!isLogin)}>
+            {isLogin ? "Register" : "Login"}
+          </button>
         </div>
       </div>
     </div>

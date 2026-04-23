@@ -24,15 +24,20 @@ body {
 
 /* Root wrapper */
 .app {
-  height: 100vh;              /* full viewport height */
+  min-height: 100vh;
   display: flex;
-  justify-content: center;    /* horizontal center */
-  align-items: center;        /* vertical center */
+  justify-content: center;
+  align-items: flex-start;    /* don't vertically center — lets tall pages scroll */
   background-color: var(--bg);
 }
 
-/* Common elements */
-input {
+/* Login page needs vertical centering since it's short */
+.app:has(.auth-container) {
+  align-items: center;
+}
+
+/* Common elements — scoped to auth forms only */
+.card input {
   width: 100%;
   padding: 8px;
   margin-bottom: 10px;
