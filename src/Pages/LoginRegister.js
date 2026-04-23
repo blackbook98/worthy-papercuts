@@ -29,6 +29,7 @@ function LoginRegister() {
         },
       });
       localStorage.setItem("jwtToken", response.data.access_token);
+      localStorage.setItem("userId", response.data.user_id);
       setUserDetails(userData);
       navigate("/dashboard");
     } catch (error) {

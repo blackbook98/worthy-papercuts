@@ -4,8 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
 
 function Dashboard() {
-  const { userId } = useParams();
+  const userId = localStorage.getItem("userId");
   const navigate = useNavigate();
+  if (!userId) {
+    navigate("/login");
+  }
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState([]);
   const [bookLists, setBookLists] = useState({
@@ -67,6 +70,7 @@ function Dashboard() {
         data: {
           book: book,
           listName: listName,
+          user_id: userId,
         },
       });
     } catch (e) {
