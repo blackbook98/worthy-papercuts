@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
 
+const LIST_LABELS = {
+  toRead: "To Read",
+  currentlyReading: "Reading",
+  finished: "Finished",
+};
+
 function Dashboard() {
-  let userId = null;
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
@@ -13,6 +18,18 @@ function Dashboard() {
     finished: [],
     currentlyReading: [],
   });
+  const [openMenu, setOpenMenu] = useState(null); // { bookId, listName }
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchBooks = async () => {
     const API_KEY = process.env.REACT_APP_GOOGLE_BOOKS_API_KEY;
@@ -40,6 +57,7 @@ function Dashboard() {
   };
 
   const addBookToList = async (book, listName) => {
+    setOpenMenu(null);
     setBookLists((prevLists) => {
       const newLists = { ...prevLists };
 
@@ -69,7 +87,7 @@ function Dashboard() {
         data: {
           book: book,
           listName: listName,
-          user_id: userId,
+          user_id: localStorage.getItem("userId"),
         },
       });
     } catch (e) {
@@ -82,42 +100,35 @@ function Dashboard() {
     }
   };
 
-  const removeBookFromLists = (book) => {
+  const removeBookFromLists = async (book) => {
     setBookLists((prevLists) => {
       const newLists = { ...prevLists };
-
-      //eslint-disable-next-line array-callback-return
-      Object.keys(newLists).map((listName) => {
-        if (newLists[listName].some((b) => b.id === book.id)) {
-          newLists[listName] = newLists[listName].filter(
-            (b) => b.id !== book.id
-          );
-        }
+      Object.keys(newLists).forEach((list) => {
+        newLists[list] = newLists[list].filter((b) => b.id !== book.id);
       });
-
       return newLists;
     });
-  };
-
-  let listName = (book) => {
-    let camelMap = {
-      toRead: "To Read",
-      finished: "Finished",
-      currentlyReading: "Reading",
-    };
-
-    const listName = Object.keys(bookLists).find((list) =>
-      bookLists[list].some((b) => b.id === book.id)
-    );
-    let current_list =
-      listName && camelMap[listName] ? camelMap[listName] : null;
-    return current_list;
+    setOpenMenu(null);
+    try {
+      await axios({
+        url: `${process.env.REACT_APP_BE_URL}/saveLists`,
+        method: "delete",
+        data: { book_id: book.id, user_id: localStorage.getItem("userId") },
+      });
+    } catch (e) {
+      if (e.response?.data?.message?.indexOf("Unauthorized") !== -1) {
+        alert("Your login has expired");
+        navigate("/login");
+      } else {
+        console.error(e);
+      }
+    }
   };
 
   const fetchSavedBookLists = async () => {
     try {
       const response = await axios({
-        url: `${process.env.REACT_APP_BE_URL}/lists?userId=${userId}`,
+        url: `${process.env.REACT_APP_BE_URL}/lists?userId=${localStorage.getItem("userId")}`,
         method: "get",
       });
       // Rearrange the lists according to type: toRead, finished, currentlyReading
@@ -141,13 +152,13 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    userId = localStorage.getItem("userId");
-    if (!userId) {
+    if (!localStorage.getItem("userId")) {
       navigate("/login");
     } else {
       fetchSavedBookLists();
     }
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -225,9 +236,9 @@ function Dashboard() {
                   >
                     Finished
                   </option>
-                  {listName(book) && (
-                    <option value="remove">Remove from lists</option>
-                  )}
+                  {Object.keys(LIST_LABELS).some((l) =>
+                    bookLists[l].some((b) => b.id === book.id)
+                  ) && <option value="remove">Remove from lists</option>}
                 </select>
               </div>
             </div>
@@ -236,22 +247,74 @@ function Dashboard() {
       </section>
 
       <section style={styles.listsContainer}>
-        {["toRead", "currentlyReading", "finished"].map((listName) => (
-          <div key={listName} style={styles.listSection}>
-            <h2>{listName.replace(/([A-Z])/g, " $1").toUpperCase()}</h2>
-            {bookLists[listName].length === 0 ? (
+        {["toRead", "currentlyReading", "finished"].map((list) => (
+          <div key={list} style={styles.listSection}>
+            <h2>{LIST_LABELS[list].toUpperCase()}</h2>
+            {bookLists[list].length === 0 ? (
               <p style={{ fontStyle: "italic" }}>No books in this list</p>
             ) : (
               <ul style={styles.bookList}>
-                {bookLists[listName].map((book) => (
-                  <li key={book.id} style={styles.bookListItem}>
-                    {book.volumeInfo.title}{" "}
-                    <span style={styles.authorsSmall}>
-                      by{" "}
-                      {book.volumeInfo.authors?.join(", ") || "Unknown Author"}
-                    </span>
-                  </li>
-                ))}
+                {bookLists[list].map((book) => {
+                  const isOpen =
+                    openMenu?.bookId === book.id && openMenu?.listName === list;
+                  const otherLists = Object.keys(LIST_LABELS).filter(
+                    (l) => l !== list
+                  );
+                  return (
+                    <li key={book.id} style={styles.bookListItem}>
+                      <div style={styles.bookListRow}>
+                        <div style={styles.bookListText}>
+                          {book.volumeInfo.title}
+                          <span style={styles.authorsSmall}>
+                            {" "}
+                            by{" "}
+                            {book.volumeInfo.authors?.join(", ") ||
+                              "Unknown Author"}
+                          </span>
+                        </div>
+                        <div
+                          style={{ position: "relative" }}
+                          ref={isOpen ? menuRef : null}
+                        >
+                          <button
+                            style={styles.dotsButton}
+                            onClick={() =>
+                              setOpenMenu(
+                                isOpen
+                                  ? null
+                                  : { bookId: book.id, listName: list }
+                              )
+                            }
+                          >
+                            ⋮
+                          </button>
+                          {isOpen && (
+                            <div style={styles.dropdown}>
+                              {otherLists.map((target) => (
+                                <div
+                                  key={target}
+                                  style={styles.dropdownItem}
+                                  onClick={() => addBookToList(book, target)}
+                                >
+                                  {LIST_LABELS[target]}
+                                </div>
+                              ))}
+                              <div
+                                style={{
+                                  ...styles.dropdownItem,
+                                  color: "#e74c3c",
+                                }}
+                                onClick={() => removeBookFromLists(book)}
+                              >
+                                Remove from list
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -370,16 +433,56 @@ const styles = {
   bookList: {
     listStyleType: "none",
     paddingLeft: 0,
+    maxHeight: "174px",
+    overflowY: "auto",
   },
   bookListItem: {
     padding: "0.5rem 0",
     borderBottom: "1px solid #bdc3c7",
     fontWeight: "600",
   },
+  bookListRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  bookListText: {
+    flex: 1,
+    minWidth: 0,
+  },
   authorsSmall: {
     fontWeight: "normal",
     fontSize: "0.85rem",
     color: "#7f8c8d",
+  },
+  dotsButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1.1rem",
+    padding: "0 4px",
+    color: "#555",
+    lineHeight: 1,
+    flexShrink: 0,
+  },
+  dropdown: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    backgroundColor: "#fff",
+    border: "1px solid #ccc",
+    borderRadius: 4,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    zIndex: 100,
+    minWidth: 160,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    padding: "0.5rem 0.8rem",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+    whiteSpace: "nowrap",
   },
 };
 
