@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
+
 import ReviewModal from "./ReviewModal";
 
 const LIST_LABELS = {
@@ -418,6 +419,16 @@ function Dashboard() {
                                 </button>
                                 {isOpen && (
                                   <div style={styles.dropdown}>
+                                    <div
+                                      style={styles.dropdownItem}
+                                      onClick={() =>
+                                        navigate(`/about/${book.id}`, {
+                                          state: { book },
+                                        })
+                                      }
+                                    >
+                                      About
+                                    </div>
                                     {otherLists.map((target) => (
                                       <div
                                         key={target}
@@ -494,7 +505,7 @@ const styles = {
   },
   headerOrn: {
     fontSize: "1rem",
-    color: "#e8a235",
+    color: "#f5f0e8",
     opacity: 0.6,
   },
 
@@ -752,6 +763,7 @@ const styles = {
     listStyle: "none",
     padding: "0 0 0.5rem",
     margin: 0,
+    minHeight: 220,
     maxHeight: 220,
     overflowY: "auto",
     scrollbarWidth: "thin",
