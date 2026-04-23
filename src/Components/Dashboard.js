@@ -3,11 +3,9 @@ import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
-  const userId = localStorage.getItem("userId");
+  let userId = null;
   const navigate = useNavigate();
-  if (!userId) {
-    navigate("/login");
-  }
+
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState([]);
   const [bookLists, setBookLists] = useState({
@@ -143,7 +141,12 @@ function Dashboard() {
   };
 
   useEffect(() => {
-    fetchSavedBookLists();
+    userId = localStorage.getItem("userId");
+    if (!userId) {
+      navigate("/login");
+    } else {
+      fetchSavedBookLists();
+    }
   });
 
   return (

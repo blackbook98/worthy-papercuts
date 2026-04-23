@@ -98,3 +98,14 @@ button:hover {
   color: var(--muted);
   font-size: 14px;
 }
+
+.logout-link {
+  position: fixed;
+  top: 1rem;
+  right: 1.5rem;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  z-index: 1000;
+}
