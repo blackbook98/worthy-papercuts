@@ -1,8 +1,10 @@
 import { useState } from "react";
 import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 function Dashboard() {
+  const { userId } = useParams();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [books, setBooks] = useState([]);
@@ -98,7 +100,7 @@ function Dashboard() {
     let camelMap = {
       toRead: "To Read",
       finished: "Finished",
-      currentlyReading: "Currently Reading",
+      currentlyReading: "Reading",
     };
 
     const listName = Object.keys(bookLists).find((list) =>
@@ -107,6 +109,30 @@ function Dashboard() {
     let current_list =
       listName && camelMap[listName] ? camelMap[listName] : null;
     return current_list;
+  };
+
+  const fetchBookLists = async () => {
+    try {
+      // Replace with your actual API url and params
+      const response = await axios({
+        url: `${process.env.REACT_APP_BE_URL}/lists/byUser?userId=${userId}`,
+        method: "get",
+        data: {
+          user: userId,
+        },
+      });
+      // Rearrange the lists according to type: toRead, finished, currentlyReading
+      const listsData = {
+        toRead: response.data.filter((book) => book.list === "toRead"),
+        finished: response.data.filter((book) => book.list === "finished"),
+        currentlyReading: response.data.filter(
+          (book) => book.list === "currentlyReading"
+        ),
+      };
+      setBookLists(listsData);
+    } catch (e) {
+      console.error("Error fetching book lists", e);
+    }
   };
 
   return (
@@ -177,7 +203,7 @@ function Dashboard() {
                       (b) => b.id === book.id
                     )}
                   >
-                    Currently Reading
+                    Reading
                   </option>
                   <option
                     value="finished"
@@ -198,9 +224,7 @@ function Dashboard() {
       <section style={styles.listsContainer}>
         {["toRead", "currentlyReading", "finished"].map((listName) => (
           <div key={listName} style={styles.listSection}>
-            <h2 style={styles.sectionTitle}>
-              {listName.replace(/([A-Z])/g, " $1").toUpperCase()}
-            </h2>
+            <h2>{listName.replace(/([A-Z])/g, " $1").toUpperCase()}</h2>
             {bookLists[listName].length === 0 ? (
               <p style={{ fontStyle: "italic" }}>No books in this list</p>
             ) : (
@@ -233,7 +257,7 @@ const styles = {
   title: {
     textAlign: "center",
     marginBottom: "1.5rem",
-    color: "#2c3e50",
+    color: "var(--text)",
   },
   searchContainer: {
     display: "flex",
@@ -262,6 +286,7 @@ const styles = {
     borderBottom: "2px solid #34495e",
     paddingBottom: "0.25rem",
     marginBottom: "1rem",
+    color: "var(--text)",
   },
   bookGrid: {
     display: "flex",
@@ -270,6 +295,7 @@ const styles = {
     paddingBottom: "0.5rem",
     WebkitOverflowScrolling: "touch",
     scrollbarWidth: "thin",
+    color: "var(--text)",
   },
   bookCard: {
     border: "1px solid #ddd",

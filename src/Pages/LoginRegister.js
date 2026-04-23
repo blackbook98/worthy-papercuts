@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -63,67 +63,60 @@ function LoginRegister() {
   };
 
   return (
-    <div
-      style={{ maxWidth: "340px", margin: "50px auto", textAlign: "center" }}
-    >
-      <h2>{isLogin ? "Login" : "Register"}</h2>
-      <form onSubmit={isLogin ? handleLogin : handleRegister}>
-        {!isLogin && (
-          <input
-            type="name"
-            placeholder="Name"
-            value={userDetails.name}
-            onChange={(e) => updateUserDetails("name", e.target.value)}
-            required
-            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-          />
-        )}
-        {!isLogin && (
-          <input
-            type="email"
-            placeholder="Email"
-            value={userDetails.email}
-            onChange={(e) => updateUserDetails("email", e.target.value)}
-            required
-            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-          />
-        )}
-        <input
-          type="text"
-          placeholder="Username"
-          value={userDetails.username}
-          onChange={(e) => updateUserDetails("username", e.target.value)}
-          required
-          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={userDetails.password}
-          onChange={(e) => updateUserDetails("password", e.target.value)}
-          required
-          style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
-        />
-        <button type="submit" style={{ width: "100%", padding: "8px" }}>
-          {isLogin ? "Login" : "Register"}
-        </button>
-      </form>
-      <div style={{ marginTop: 18 }}>
-        {isLogin ? (
-          <span>
-            Don't have an account?
-            <button style={{ marginLeft: 8 }} onClick={() => setIsLogin(false)}>
-              Register
+    <div className="app">
+      <div className="auth-container">
+        <div className="card">
+          <h2>{isLogin ? "Login" : "Create an Account"}</h2>
+
+          <form onSubmit={isLogin ? handleLogin : handleRegister}>
+            {!isLogin && (
+              <input
+                type="text"
+                placeholder="Name"
+                value={userDetails.name}
+                onChange={(e) => updateUserDetails("name", e.target.value)}
+                required
+              />
+            )}
+
+            {!isLogin && (
+              <input
+                type="email"
+                placeholder="Email"
+                value={userDetails.email}
+                onChange={(e) => updateUserDetails("email", e.target.value)}
+                required
+              />
+            )}
+
+            <input
+              type="text"
+              placeholder="Username"
+              value={userDetails.username}
+              onChange={(e) => updateUserDetails("username", e.target.value)}
+              required
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={userDetails.password}
+              onChange={(e) => updateUserDetails("password", e.target.value)}
+              required
+            />
+
+            <button type="submit">{isLogin ? "Login" : "Submit"}</button>
+          </form>
+
+          <div className="auth-switch">
+            <div className="info-text">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}
+            </div>
+            <button className="secondary" onClick={() => setIsLogin(!isLogin)}>
+              {isLogin ? "Register" : "Login"}
             </button>
-          </span>
-        ) : (
-          <span>
-            Already have an account?
-            <button style={{ marginLeft: 8 }} onClick={() => setIsLogin(true)}>
-              Login
-            </button>
-          </span>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,38 +1,100 @@
-.App {
-  text-align: center;
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* Dark theme variables */
+:root {
+  --bg: #121212;
+  --card: #1e1e1e;
+  --border: #2c2c2c;
+  --text: #e5e5e5;
+  --muted: #9ca3af;
+  --accent: #3b82f6;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* Apply globally */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: sans-serif;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Root wrapper */
+.app {
+  height: 100vh;              /* full viewport height */
+  display: flex;
+  justify-content: center;    /* horizontal center */
+  align-items: center;        /* vertical center */
+  background-color: var(--bg);
+}
+
+/* Common elements */
+input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  background-color: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+button {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.card {
+  width: 100%;
+  padding: 24px;
+  background-color: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.card form {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 12px;
+}
+
+.card input {
+  width: 100%;
+}
+
+.card button {
+  width: 100%;
+}
+
+.card h2 {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 360px;
+}
+
+.auth-switch {
+  display: flex;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 8px;
+  margin-top: 16px;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.info-text {
+  color: var(--muted);
+  font-size: 14px;
 }
