@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
-import { useParams } from "react-router-dom";
 
 function Dashboard() {
   const userId = localStorage.getItem("userId");
@@ -115,29 +114,35 @@ function Dashboard() {
     return current_list;
   };
 
-  const fetchBookLists = async () => {
+  const fetchSavedBookLists = async () => {
     try {
-      // Replace with your actual API url and params
       const response = await axios({
-        url: `${process.env.REACT_APP_BE_URL}/lists/byUser?userId=${userId}`,
+        url: `${process.env.REACT_APP_BE_URL}/lists?userId=${userId}`,
         method: "get",
-        data: {
-          user: userId,
-        },
       });
       // Rearrange the lists according to type: toRead, finished, currentlyReading
+      const formatList = (listName) =>
+        response.data
+          .filter((book) => book.list === listName)
+          .map((book) => ({
+            id: book.book_id,
+            volumeInfo: book.volume_info,
+          }));
+
       const listsData = {
-        toRead: response.data.filter((book) => book.list === "toRead"),
-        finished: response.data.filter((book) => book.list === "finished"),
-        currentlyReading: response.data.filter(
-          (book) => book.list === "currentlyReading"
-        ),
+        toRead: formatList("toRead"),
+        finished: formatList("finished"),
+        currentlyReading: formatList("currentlyReading"),
       };
       setBookLists(listsData);
     } catch (e) {
       console.error("Error fetching book lists", e);
     }
   };
+
+  useEffect(() => {
+    fetchSavedBookLists();
+  });
 
   return (
     <div style={styles.container}>
