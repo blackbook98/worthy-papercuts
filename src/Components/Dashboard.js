@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
+import ReviewModal from "./ReviewModal";
 
 const LIST_LABELS = {
   toRead: "To Read",
@@ -19,6 +20,7 @@ function Dashboard() {
     currentlyReading: [],
   });
   const [openMenu, setOpenMenu] = useState(null); // { bookId, listName }
+  const [reviewTarget, setReviewTarget] = useState(null); // book
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ function Dashboard() {
     setBooks([...withThumbnail, ...withoutThumbnail]);
   };
 
-  const addBookToList = async (book, listName) => {
+  const commitBookToList = async (book, listName) => {
     setOpenMenu(null);
     setBookLists((prevLists) => {
       const newLists = { ...prevLists };
@@ -99,6 +101,15 @@ function Dashboard() {
       }
     }
   };
+
+  const addBookToList = async (book, listName) => {
+    await commitBookToList(book, listName);
+    if (listName === "finished") {
+      setReviewTarget(book);
+    }
+  };
+
+  const closeReview = () => setReviewTarget(null);
 
   const removeBookFromLists = async (book) => {
     setBookLists((prevLists) => {
@@ -320,6 +331,10 @@ function Dashboard() {
           </div>
         ))}
       </section>
+
+      {reviewTarget && (
+        <ReviewModal book={reviewTarget} onClose={closeReview} />
+      )}
     </div>
   );
 }
