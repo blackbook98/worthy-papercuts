@@ -1,70 +1,284 @@
-# Getting Started with Create React App
+# Worthy Papercuts 📚
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack book tracking and discovery platform with AI-powered recommendations and an intelligent conversational assistant. Users can search for books, manage reading lists, and rate and review titles. Built as a portfolio project to showcase microservice architecture, machine learning integration, and modern AI agent development.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Live Demo
 
-### `npm start`
+> _Link to deployed app here_
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Table of Contents
 
-### `npm test`
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [API Documentation](#api-documentation)
+- [Project Structure](#project-structure)
+- [Planned Features](#planned-features)
+- [Author](#author)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Overview
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The interesting part of this project is not just the features — it's the deliberate engineering decisions behind them.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Rather than building a monolith, the system is split into three independently deployable services: a NestJS API, a Python ML microservice, and a React frontend. Recommendations are decoupled from the request cycle entirely — pre-computed on a schedule and served instantly from the database. The AI chatbot is implemented as a proper tool-calling agent rather than a simple prompt wrapper, giving it the ability to take real actions on a user's behalf.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The stack was chosen to reflect real-world trade-offs:
 
-### `npm run eject`
+- **NestJS + TypeScript** for a structured, scalable backend with clear module boundaries
+- **React** for a lightweight frontend that calls Google Books API directly, keeping book search out of the backend
+- **Python + scikit-learn** for the ML layer — keeping data science concerns out of the Node service
+- **Google ADK + Gemini** for an agent that reasons over tools rather than just generating text
+- **PostgreSQL on Neon.tech** for a serverless-friendly managed database
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Features
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Core
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- 🔐 JWT authentication — register, login, logout
+- 📚 Search for books via Google Books API
+- 📋 Save books to lists — **To Read**, **Currently Reading**, **Finished**
+- 🔄 Move books between lists
+- ⭐ Rate and review finished books
+- 🔍 Search and filter within your own lists
+- 👥 View other users' ratings and reviews on book detail pages
 
-## Learn More
+### AI Features
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- 🤖 **AI Book Recommendations** — personalized suggestions powered by a Python ML microservice using content-based filtering (TF-IDF + cosine similarity). Recommendations are pre-computed on a schedule and pulled from Google Books API based on your taste profile
+- 💬 **AI Chatbot Agent** — powered by Google ADK and Gemini. Can search for books, add them to your lists, fetch your recommendations, and discuss literary topics conversationally
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## Architecture
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
+                    ┌─────────────────────┐
+                    │   Google Books API  │◄──────────────────────┐
+                    └──────────┬──────────┘                       │
+                               │ book search (direct)             │ recommendation
+                               ▼                                  │ candidates
+┌──────────────────────────────────────────────────────────┐      │
+│                       React Frontend                     │      │
+│    Dashboard │ Explore │ ChatBot │ LoginRegister         │      │
+└────────────────────────────┬─────────────────────────────┘      │
+                             │ HTTP / REST + JWT                  │
+┌────────────────────────────▼─────────────────────────────┐      │
+│                      NestJS Backend                      │      │
+│     Auth │ Lists │ Reviews │ Recommender │ Chatbot Agent │──────┘
+└──────┬────────────────────────────────────────┬──────────┘
+       │ HTTP (cron-triggered)                  │ TypeORM
+       │                               ┌────────▼────────┐
+┌──────▼──────────────┐                │   PostgreSQL DB │
+│  Python Recommender │                │   (Neon.tech)   │
+│   ML Microservice   │                └─────────────────┘
+│   (scikit-learn /   │
+│   TF-IDF + cosine)  │
+└─────────────────────┘
+```
 
-### Analyzing the Bundle Size
+### Request Flow — Recommendations
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```
+Scheduled job (every 12 hours)
+        │
+        ▼
+NestJS fetches user's finished books + ratings from DB
+        │
+        ▼
+POST to Python /recommend
+        │
+        ▼
+Python extracts taste profile (top genres, authors, keywords)
+Builds search queries → hits Google Books API
+Scores candidates via cosine similarity
+        │
+        ▼
+Returns top 10 books → NestJS saves to recommendations table
+        │
+        ▼
+User hits GET /recommendations → instant response from DB ⚡
+```
 
-### Making a Progressive Web App
+### Request Flow — AI Chatbot
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```
+User: "Add Dune to my reading list"
+        │
+        ▼
+POST /chatbot/message → NestJS ChatbotService
+        │
+        ▼
+Google ADK Agent (Gemini 1.5 Flash)
+  → calls search_books tool (Google Books API)
+  → confirms book with user
+  → calls add_book_to_list tool (directly hits ListsService)
+        │
+        ▼
+"Done! I've added Dune by Frank Herbert to your To Read list."
+```
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Tech Stack
 
-### Deployment
+### [Backend](https://github.com/blackbook98/book-share-service)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+| Technology                 | Purpose                                      |
+| -------------------------- | -------------------------------------------- |
+| NestJS + TypeScript        | REST API, business logic, agent              |
+| TypeORM                    | ORM for PostgreSQL                           |
+| PostgreSQL (Neon.tech)     | Primary database                             |
+| JWT + Passport.js          | Authentication                               |
+| Google ADK (`@google/adk`) | AI agent framework                           |
+| Gemini 2.5 Flash           | LLM powering the chatbot                     |
+| `@nestjs/schedule`         | Cron jobs for recommendation pre-computation |
 
-### `npm run build` fails to minify
+### [Python ML Service](https://github.com/blackbook98/worthy-papercuts-recommender)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+| Technology    | Purpose                                  |
+| ------------- | ---------------------------------------- |
+| FastAPI       | Lightweight API framework                |
+| scikit-learn  | TF-IDF vectorization + cosine similarity |
+| httpx         | Async Google Books API calls             |
+| python-dotenv | Environment variable management          |
+
+### [Frontend](https://github.com/blackbook98/worthy-papercuts)
+
+| Technology       | Purpose                                     |
+| ---------------- | ------------------------------------------- |
+| React            | Frontend framework                          |
+| Google Books API | Book search (called directly from frontend) |
+
+### Infrastructure
+
+| Technology            | Purpose                          |
+| --------------------- | -------------------------------- |
+| Google Cloud Run      | Serverless container hosting     |
+| Docker                | Containerization                 |
+| GCP Artifact Registry | Container image storage          |
+| Cloud Scheduler       | Triggers recommendation cron job |
+
+---
+
+## API Documentation
+
+The NestJS backend exposes the following endpoints. All endpoints except auth require a valid JWT in the `Authorization: Bearer <token>` header.
+
+### Auth
+
+| Method | Endpoint         | Description           |
+| ------ | ---------------- | --------------------- |
+| POST   | `/auth/register` | Register a new user   |
+| POST   | `/auth/login`    | Login and receive JWT |
+| POST   | `/auth/logout`   | Logout                |
+
+### Lists
+
+| Method | Endpoint         | Description                 |
+| ------ | ---------------- | --------------------------- |
+| GET    | `/lists`         | Get user's reading lists    |
+| POST   | `/saveLists`     | Add a book to a list        |
+| PATCH  | `/lists/:bookId` | Move book to different list |
+| DELETE | `/lists/:bookId` | Remove book from lists      |
+
+### Reviews
+
+| Method | Endpoint                | Description                |
+| ------ | ----------------------- | -------------------------- |
+| POST   | `/reviews`              | Create a review            |
+| PATCH  | `/reviews/:id`          | Edit own review            |
+| DELETE | `/reviews/:id`          | Delete own review          |
+| GET    | `/reviews/book/:bookId` | Get all reviews for a book |
+
+### Recommendations
+
+| Method | Endpoint           | Description                      |
+| ------ | ------------------ | -------------------------------- |
+| GET    | `/recommendations` | Get personalized recommendations |
+
+### Chatbot
+
+| Method | Endpoint           | Description                    |
+| ------ | ------------------ | ------------------------------ |
+| POST   | `/chatbot/message` | Send a message to the AI agent |
+
+### Python Recommender (internal)
+
+| Method | Endpoint     | Description                        |
+| ------ | ------------ | ---------------------------------- |
+| POST   | `/recommend` | Compute recommendations for a user |
+| GET    | `/health`    | Health check                       |
+
+---
+
+## Project Structure
+
+Each service lives in its own repository. Click the section headers to visit each repo.
+
+### [Backend](https://github.com/blackbook98/book-share-service)
+
+```
+src/
+├── auth/                 # JWT auth, guards, strategies
+├── user/                 # User entity and service
+├── recommender/          # Cron job, recommendation storage
+├── chatbot/              # ADK agent, tools for agent
+│   └── tools/
+│       ├── books.tool.ts
+│       └── lists.tool.ts
+└── database/
+    └── models/           # TypeORM entities
+```
+
+### [Frontend](https://github.com/blackbook98/worthy-papercuts)
+
+```
+src/
+├── Components/
+│   ├── About.js
+│   ├── ChatBot.js
+│   ├── Dashboard.js
+│   ├── Explore.js
+│   ├── LoginRegister.js
+│   ├── Logout.js
+│   └── ReviewModal.js
+├── helpers/
+│   └── helper_axios.js
+├── App.js
+└── index.js
+```
+
+### [Python Recommender](https://github.com/blackbook98/worthy-papercuts-recommender)
+
+```
+├── main.py               # FastAPI app
+├── recommender.py        # TF-IDF + cosine similarity logic
+└── requirements.txt
+```
+
+---
+
+## Planned Features
+
+- **Collaborative filtering** — cross-user recommendations once the platform has sufficient rating data
+- **User profile page** — reading stats, favourite genres, reviews written
+- **Book exchange system** — match users within 10km who want to exchange books, using PostGIS geospatial queries
+- **Reading pace tracker** — log reading sessions and predict finish dates
+
+---
+
+## Author
+
+Built by **Oindrila Chakraborti**
+
+- GitHub: [blackbook98](https://github.com/blackbook98)
+- LinkedIn: [oindrila-chakraborti](https://www.linkedin.com/in/oindrila-chakraborti)
