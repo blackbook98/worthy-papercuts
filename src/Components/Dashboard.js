@@ -3,6 +3,7 @@ import axios from "../helpers/helper_axios";
 import { useNavigate } from "react-router-dom";
 
 import ReviewModal from "./ReviewModal";
+import Explore from "./Explore";
 
 const LIST_LABELS = {
   toRead: "To Read",
@@ -26,6 +27,7 @@ function Dashboard() {
     finished: [],
     currentlyReading: [],
   });
+  const [activeTab, setActiveTab] = useState("shelf");
   const [openMenu, setOpenMenu] = useState(null);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [shelfSearch, setShelfSearch] = useState({
@@ -196,272 +198,315 @@ function Dashboard() {
 
   return (
     <div style={styles.page}>
+      {/* Tabs — global, above everything */}
+      <div style={styles.tabBar}>
+        {["shelf", "explore"].map((tab) => (
+          <button
+            key={tab}
+            style={{
+              ...styles.tab,
+              ...(activeTab === tab ? styles.tabActive : {}),
+            }}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === "shelf" ? "My Shelf" : "Explore"}
+          </button>
+        ))}
+      </div>
+
       <div style={styles.container}>
         {/* Header */}
         <header style={styles.header}>
           <div style={styles.headerOrn}>✦</div>
-          <h1 style={styles.title}>My Bookshelf</h1>
+          <h1 style={styles.title}>
+            {activeTab === "shelf" ? "My Bookshelf" : "Discover Your Next Read"}
+          </h1>
           <div style={styles.headerOrn}>✦</div>
         </header>
 
-        {/* Search */}
-        <div style={styles.searchWrapper}>
-          <div style={styles.searchBar}>
-            <span style={styles.searchIcon}>⌕</span>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for a book..."
-              style={styles.searchInput}
-              onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
-            />
-            <button onClick={fetchBooks} style={styles.searchButton}>
-              Search
-            </button>
-          </div>
-        </div>
-
-        {/* Search Results */}
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Search Results</h2>
-            {books.length > 0 && (
-              <span style={styles.badge}>{books.length}</span>
-            )}
-          </div>
-
-          {books.length === 0 ? (
-            <p style={styles.emptyState}>
-              Search for a book above to discover your next read.
-            </p>
-          ) : (
-            <div style={styles.bookGrid}>
-              {books.map((book) => (
-                <div key={book.id} style={styles.bookCard}>
-                  <div style={styles.bookCoverWrap}>
-                    {book.volumeInfo.imageLinks?.thumbnail ? (
-                      <img
-                        src={book.volumeInfo.imageLinks.thumbnail}
-                        alt={book.volumeInfo.title}
-                        style={styles.bookCover}
-                      />
-                    ) : (
-                      <div style={styles.noCover}>
-                        <span style={styles.noCoverIcon}>📖</span>
-                      </div>
-                    )}
-                  </div>
-                  <div style={styles.bookInfo}>
-                    <h3 style={styles.bookTitle}>{book.volumeInfo.title}</h3>
-                    <p style={styles.bookAuthors}>
-                      {book.volumeInfo.authors?.join(", ") || "Unknown Author"}
-                    </p>
-                    <select
-                      defaultValue=""
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (!value) return;
-                        if (value === "remove") removeBookFromLists(book);
-                        else addBookToList(book, value);
-                        e.target.value = "";
-                      }}
-                      style={styles.addSelect}
-                    >
-                      <option value="" disabled>
-                        + Add to list
-                      </option>
-                      <option
-                        value="toRead"
-                        disabled={bookLists.toRead.some(
-                          (b) => b.id === book.id
-                        )}
-                      >
-                        To Read
-                      </option>
-                      <option
-                        value="currentlyReading"
-                        disabled={bookLists.currentlyReading.some(
-                          (b) => b.id === book.id
-                        )}
-                      >
-                        Reading
-                      </option>
-                      <option
-                        value="finished"
-                        disabled={bookLists.finished.some(
-                          (b) => b.id === book.id
-                        )}
-                      >
-                        Finished
-                      </option>
-                      {Object.keys(LIST_LABELS).some((l) =>
-                        bookLists[l].some((b) => b.id === book.id)
-                      ) && <option value="remove">Remove from lists</option>}
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Shelves */}
-        <section style={styles.shelvesSection}>
-          <h2 style={styles.shelvesSectionTitle}>Your Shelves</h2>
-          <div style={styles.shelvesGrid}>
-            {["toRead", "currentlyReading", "finished"].map((list) => (
-              <div key={list} style={styles.shelf}>
-                <div
-                  style={{
-                    ...styles.shelfAccentBar,
-                    backgroundColor: LIST_ACCENTS[list],
-                  }}
+        {activeTab === "shelf" && (
+          <>
+            {/* Search */}
+            <div style={styles.searchWrapper}>
+              <div style={styles.searchBar}>
+                <span style={styles.searchIcon}>⌕</span>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search for a book..."
+                  style={styles.searchInput}
+                  onKeyDown={(e) => e.key === "Enter" && fetchBooks()}
                 />
-                <div style={styles.shelfHeader}>
-                  <h3
-                    style={{ ...styles.shelfTitle, color: LIST_ACCENTS[list] }}
-                  >
-                    {LIST_LABELS[list].toUpperCase()}
-                  </h3>
-                  <div style={styles.shelfHeaderRight}>
-                    <span
-                      style={{
-                        ...styles.shelfCount,
-                        backgroundColor: LIST_ACCENTS[list] + "22",
-                        color: LIST_ACCENTS[list],
-                      }}
-                    >
-                      {bookLists[list].length}
-                    </span>
-                    {bookLists[list].length > 0 && (
-                      <button
-                        style={{
-                          ...styles.shelfSearchToggle,
-                          color: shelfSearch[list].open
-                            ? LIST_ACCENTS[list]
-                            : "#444",
-                        }}
-                        onClick={() => toggleShelfSearch(list)}
-                        title="Search in list"
-                      >
-                        🔍
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <button onClick={fetchBooks} style={styles.searchButton}>
+                  Search
+                </button>
+              </div>
+            </div>
 
-                {shelfSearch[list].open && (
-                  <div style={styles.shelfSearchBar}>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={shelfSearch[list].query}
-                      onChange={(e) => setShelfQuery(list, e.target.value)}
-                      placeholder="Filter by title or author..."
-                      style={styles.shelfSearchInput}
-                    />
-                  </div>
-                )}
-
-                {bookLists[list].length === 0 ? (
-                  <p style={styles.shelfEmpty}>Nothing here yet.</p>
-                ) : (
-                  <ul style={styles.shelfList}>
-                    {bookLists[list]
-                      .filter((book) => {
-                        const q = shelfSearch[list].query.toLowerCase().trim();
-                        if (!q) return true;
-                        return (
-                          book.volumeInfo.title?.toLowerCase().includes(q) ||
-                          book.volumeInfo.authors
-                            ?.join(", ")
-                            .toLowerCase()
-                            .includes(q)
-                        );
-                      })
-                      .map((book) => {
-                        const isOpen =
-                          openMenu?.bookId === book.id &&
-                          openMenu?.listName === list;
-                        const otherLists = Object.keys(LIST_LABELS).filter(
-                          (l) => l !== list
-                        );
-                        return (
-                          <li key={book.id} style={styles.shelfItem}>
-                            <div style={styles.shelfItemRow}>
-                              <div style={styles.shelfItemText}>
-                                <span style={styles.shelfBookTitle}>
-                                  {book.volumeInfo.title}
-                                </span>
-                                <span style={styles.shelfBookAuthor}>
-                                  {" "}
-                                  by{" "}
-                                  {book.volumeInfo.authors?.join(", ") ||
-                                    "Unknown"}
-                                </span>
-                              </div>
-                              <div
-                                style={{ position: "relative" }}
-                                ref={isOpen ? menuRef : null}
-                              >
-                                <button
-                                  style={styles.dotsBtn}
-                                  onClick={() =>
-                                    setOpenMenu(
-                                      isOpen
-                                        ? null
-                                        : { bookId: book.id, listName: list }
-                                    )
-                                  }
-                                >
-                                  ⋮
-                                </button>
-                                {isOpen && (
-                                  <div style={styles.dropdown}>
-                                    <div
-                                      style={styles.dropdownItem}
-                                      onClick={() =>
-                                        navigate(`/about/${book.id}`, {
-                                          state: { book },
-                                        })
-                                      }
-                                    >
-                                      About
-                                    </div>
-                                    {otherLists.map((target) => (
-                                      <div
-                                        key={target}
-                                        style={styles.dropdownItem}
-                                        onClick={() =>
-                                          addBookToList(book, target)
-                                        }
-                                      >
-                                        {LIST_LABELS[target]}
-                                      </div>
-                                    ))}
-                                    <div
-                                      style={{
-                                        ...styles.dropdownItem,
-                                        ...styles.dropdownItemDanger,
-                                      }}
-                                      onClick={() => removeBookFromLists(book)}
-                                    >
-                                      Remove from list
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                  </ul>
+            {/* Search Results */}
+            <section style={styles.section}>
+              <div style={styles.sectionHeader}>
+                <h2 style={styles.sectionTitle}>Search Results</h2>
+                {books.length > 0 && (
+                  <span style={styles.badge}>{books.length}</span>
                 )}
               </div>
-            ))}
-          </div>
-        </section>
+
+              {books.length === 0 ? (
+                <p style={styles.emptyState}>
+                  Search for a book above to discover your next read.
+                </p>
+              ) : (
+                <div style={styles.bookGrid}>
+                  {books.map((book) => (
+                    <div key={book.id} style={styles.bookCard}>
+                      <div style={styles.bookCoverWrap}>
+                        {book.volumeInfo.imageLinks?.thumbnail ? (
+                          <img
+                            src={book.volumeInfo.imageLinks.thumbnail}
+                            alt={book.volumeInfo.title}
+                            style={styles.bookCover}
+                          />
+                        ) : (
+                          <div style={styles.noCover}>
+                            <span style={styles.noCoverIcon}>📖</span>
+                          </div>
+                        )}
+                      </div>
+                      <div style={styles.bookInfo}>
+                        <h3 style={styles.bookTitle}>
+                          {book.volumeInfo.title}
+                        </h3>
+                        <p style={styles.bookAuthors}>
+                          {book.volumeInfo.authors?.join(", ") ||
+                            "Unknown Author"}
+                        </p>
+                        <select
+                          defaultValue=""
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (!value) return;
+                            if (value === "remove") removeBookFromLists(book);
+                            else addBookToList(book, value);
+                            e.target.value = "";
+                          }}
+                          style={styles.addSelect}
+                        >
+                          <option value="" disabled>
+                            + Add to list
+                          </option>
+                          <option
+                            value="toRead"
+                            disabled={bookLists.toRead.some(
+                              (b) => b.id === book.id
+                            )}
+                          >
+                            To Read
+                          </option>
+                          <option
+                            value="currentlyReading"
+                            disabled={bookLists.currentlyReading.some(
+                              (b) => b.id === book.id
+                            )}
+                          >
+                            Reading
+                          </option>
+                          <option
+                            value="finished"
+                            disabled={bookLists.finished.some(
+                              (b) => b.id === book.id
+                            )}
+                          >
+                            Finished
+                          </option>
+                          {Object.keys(LIST_LABELS).some((l) =>
+                            bookLists[l].some((b) => b.id === book.id)
+                          ) && (
+                            <option value="remove">Remove from lists</option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Shelves */}
+            <section style={styles.shelvesSection}>
+              <h2 style={styles.shelvesSectionTitle}>Your Shelves</h2>
+              <div style={styles.shelvesGrid}>
+                {["toRead", "currentlyReading", "finished"].map((list) => (
+                  <div key={list} style={styles.shelf}>
+                    <div
+                      style={{
+                        ...styles.shelfAccentBar,
+                        backgroundColor: LIST_ACCENTS[list],
+                      }}
+                    />
+                    <div style={styles.shelfHeader}>
+                      <h3
+                        style={{
+                          ...styles.shelfTitle,
+                          color: LIST_ACCENTS[list],
+                        }}
+                      >
+                        {LIST_LABELS[list].toUpperCase()}
+                      </h3>
+                      <div style={styles.shelfHeaderRight}>
+                        <span
+                          style={{
+                            ...styles.shelfCount,
+                            backgroundColor: LIST_ACCENTS[list] + "22",
+                            color: LIST_ACCENTS[list],
+                          }}
+                        >
+                          {bookLists[list].length}
+                        </span>
+                        {bookLists[list].length > 0 && (
+                          <button
+                            style={{
+                              ...styles.shelfSearchToggle,
+                              color: shelfSearch[list].open
+                                ? LIST_ACCENTS[list]
+                                : "#444",
+                            }}
+                            onClick={() => toggleShelfSearch(list)}
+                            title="Search in list"
+                          >
+                            🔍
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {shelfSearch[list].open && (
+                      <div style={styles.shelfSearchBar}>
+                        <input
+                          autoFocus
+                          type="text"
+                          value={shelfSearch[list].query}
+                          onChange={(e) => setShelfQuery(list, e.target.value)}
+                          placeholder="Filter by title or author..."
+                          style={styles.shelfSearchInput}
+                        />
+                      </div>
+                    )}
+
+                    {bookLists[list].length === 0 ? (
+                      <p style={styles.shelfEmpty}>Nothing here yet.</p>
+                    ) : (
+                      <ul style={styles.shelfList}>
+                        {bookLists[list]
+                          .filter((book) => {
+                            const q = shelfSearch[list].query
+                              .toLowerCase()
+                              .trim();
+                            if (!q) return true;
+                            return (
+                              book.volumeInfo.title
+                                ?.toLowerCase()
+                                .includes(q) ||
+                              book.volumeInfo.authors
+                                ?.join(", ")
+                                .toLowerCase()
+                                .includes(q)
+                            );
+                          })
+                          .map((book) => {
+                            const isOpen =
+                              openMenu?.bookId === book.id &&
+                              openMenu?.listName === list;
+                            const otherLists = Object.keys(LIST_LABELS).filter(
+                              (l) => l !== list
+                            );
+                            return (
+                              <li key={book.id} style={styles.shelfItem}>
+                                <div style={styles.shelfItemRow}>
+                                  <div style={styles.shelfItemText}>
+                                    <span style={styles.shelfBookTitle}>
+                                      {book.volumeInfo.title}
+                                    </span>
+                                    <span style={styles.shelfBookAuthor}>
+                                      {" "}
+                                      by{" "}
+                                      {book.volumeInfo.authors?.join(", ") ||
+                                        "Unknown"}
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{ position: "relative" }}
+                                    ref={isOpen ? menuRef : null}
+                                  >
+                                    <button
+                                      style={styles.dotsBtn}
+                                      onClick={() =>
+                                        setOpenMenu(
+                                          isOpen
+                                            ? null
+                                            : {
+                                                bookId: book.id,
+                                                listName: list,
+                                              }
+                                        )
+                                      }
+                                    >
+                                      ⋮
+                                    </button>
+                                    {isOpen && (
+                                      <div style={styles.dropdown}>
+                                        <div
+                                          style={styles.dropdownItem}
+                                          onClick={() =>
+                                            navigate(`/about/${book.id}`, {
+                                              state: { book },
+                                            })
+                                          }
+                                        >
+                                          About
+                                        </div>
+                                        {otherLists.map((target) => (
+                                          <div
+                                            key={target}
+                                            style={styles.dropdownItem}
+                                            onClick={() =>
+                                              addBookToList(book, target)
+                                            }
+                                          >
+                                            {LIST_LABELS[target]}
+                                          </div>
+                                        ))}
+                                        <div
+                                          style={{
+                                            ...styles.dropdownItem,
+                                            ...styles.dropdownItemDanger,
+                                          }}
+                                          onClick={() =>
+                                            removeBookFromLists(book)
+                                          }
+                                        >
+                                          Remove from list
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === "explore" && (
+          <Explore addBookToList={addBookToList} bookLists={bookLists} />
+        )}
       </div>
 
       {reviewTarget && (
@@ -507,6 +552,35 @@ const styles = {
     fontSize: "1rem",
     color: "#f5f0e8",
     opacity: 0.6,
+  },
+
+  // Tabs
+  tabBar: {
+    display: "flex",
+    justifyContent: "center",
+    gap: 4,
+    borderBottom: "1px solid #222",
+    backgroundColor: "#0d0d0d",
+    position: "sticky",
+    top: 0,
+    zIndex: 200,
+    padding: "0 1rem",
+  },
+  tab: {
+    background: "none",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    color: "#666",
+    cursor: "pointer",
+    fontSize: "0.95rem",
+    fontWeight: 600,
+    padding: "0.75rem 1.5rem",
+    marginBottom: "-1px",
+    transition: "color 0.15s",
+  },
+  tabActive: {
+    color: "#a78bfa",
+    borderBottomColor: "#a78bfa",
   },
 
   // Search
@@ -675,7 +749,6 @@ const styles = {
     fontSize: "0.75rem",
     cursor: "pointer",
     outline: "none",
-    marginTop: 8,
   },
 
   // Shelves
