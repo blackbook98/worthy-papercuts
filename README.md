@@ -4,9 +4,9 @@ A full-stack book tracking and discovery platform with AI-powered recommendation
 
 ---
 
-## Live Demo
+## App Link
 
-> _Link to deployed app here_
+> https://worthy-papercuts.vercel.app
 
 ---
 
@@ -38,6 +38,8 @@ The stack was chosen to reflect real-world trade-offs:
 - **PostgreSQL on Neon.tech** for a serverless-friendly managed database
 
 ---
+
+> ⚠️ Services may take 3–5 seconds to respond on first load due to Cloud Run's scale-to-zero behaviour.
 
 ## Features
 
